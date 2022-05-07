@@ -1,0 +1,55 @@
+version: '3'
+
+services:
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.nginx
+    image: helterd/nginx-node
+    networks:
+      - node-internal
+    ports:
+      - "8080:80"
+    depends_on:
+      - node
+
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile.node
+    image: helterd/node-node
+    container_name: node
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s npm rum live
+    tty: true
+    networks:
+      - node-internal
+    ports:
+      - "3000"
+    depends_on:
+      - db
+  
+  db:
+    image: mysql:5.7
+    container_name: db
+    command: --innodb-use-native-aio=0
+    restart: always
+    tty: true
+    networks:
+      - node-internal
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "node"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    
+
+networks:
+  node-internal:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
